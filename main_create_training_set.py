@@ -14,14 +14,17 @@ from shutil import copyfile
 
 DATASET_SIZE = 5011
 
+# 读取图片文件夹，读取图片路径、图片注释信息路径
 dataset_path = os.sep.join(['data', 'VOCdevkit2007', 'VOC2007'])
 images_path = os.sep.join([dataset_path, 'JPEGImages'])
 image_annotation_path = os.sep.join([dataset_path, 'Annotations'])
 
+# 设定生成图片保存的文件夹，设定生成图片路径、生成图片注释信息路径
 save_path = os.sep.join(['data', 'DIY_dataset', 'VOC2007'])
 save_imgage_path = os.sep.join([save_path, 'JPEGImages'])
 save_annotation_path = os.sep.join([save_path, 'Annotations'])
 
+# 读取voc_2007_trainval和其RoI信息，记录其索引
 imdb = get_imdb("voc_2007_trainval")
 roidb = imdb.roidb
 
@@ -29,6 +32,7 @@ image_index = imdb._load_image_set_index()
 seg_index = imdb._load_seg_set_index()
 
 
+# 生成分割和图片的匹配字典map，关键字为分割索引idx1，值为图片索引idx2
 def generate_seg_img_map():
     map = {}
     idx1 = 0
@@ -41,11 +45,11 @@ def generate_seg_img_map():
         idx1 += 1
     return map
 
-
+# 生成随机数，范围 0~分割索引最大值
 def random_seg_idx():
     return randint(0, len(seg_index)-1)
 
-
+# 生成随机数，范围 (1, len(s)-2)
 def random_obj_idx(s):
     return randint(1, len(s)-2)
 

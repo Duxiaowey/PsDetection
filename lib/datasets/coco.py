@@ -62,14 +62,14 @@ class coco(imdb):
         # do not have gt annotations)
         self._gt_splits = ('train', 'val', 'minival')
 
-    #返回文件路径
+    # 对测试集和训练集分别返回文件路径
     def _get_ann_file(self):
         prefix = 'instances' if self._image_set.find('test') == -1 \
             else 'image_info'
         return osp.join(self._data_path, 'annotations',
                         prefix + '_' + self._image_set + self._year + '.json')
 
-    ##返回image_id
+    # 返回image_id
     def _load_image_set_index(self):
         """
         Load image ids.
@@ -77,20 +77,20 @@ class coco(imdb):
         image_ids = self._COCO.getImgIds()
         return image_ids
 
-    #读取文件width
+    # 读取文件width
     def _get_widths(self):
         anns = self._COCO.loadImgs(self._image_index)
         widths = [ann['width'] for ann in anns]
         return widths
 
-    #返回第i张图片的路径
+    # 返回第i张图片的路径
     def image_path_at(self, i):
         """
         Return the absolute path to image i in the image sequence.
         """
         return self.image_path_from_index(self._image_index[i])
 
-    #根据文件索引返回图片路径
+    # 根据文件索引返回图片路径
     def image_path_from_index(self, index):
         """
         Construct an image path from the image's "index" identifier.
@@ -105,7 +105,7 @@ class coco(imdb):
             'Path does not exist: {}'.format(image_path)
         return image_path
 
-    #返回真实RoI
+    # 返回真实RoI
     def gt_roidb(self):
         """
         Return the database of ground-truth regions of interest.
@@ -189,8 +189,8 @@ class coco(imdb):
     def _get_widths(self):
         return [r['width'] for r in self.roidb]
 
-    #将每个roidb信息汇总，以字典形式记录在列表roidb中。
-    #_image_index做平方。
+    # 将每个roidb信息汇总，以字典形式记录在列表roidb中。
+    # _image_index做平方。
     def append_flipped_images(self):
         num_images = self.num_images
         widths = self._get_widths()
@@ -212,6 +212,7 @@ class coco(imdb):
             self.roidb.append(entry)
         self._image_index = self._image_index * 2
 
+    # 返回box路径
     def _get_box_file(self, index):
         # first 14 chars / first 22 chars / all chars + .mat
         # COCO_val2014_0/COCO_val2014_000000447/COCO_val2014_000000447991.mat
@@ -219,7 +220,7 @@ class coco(imdb):
                      '_' + str(index).zfill(12) + '.mat')
         return osp.join(file_name[:14], file_name[:22], file_name)
 
-    #记录准确率
+    # 记录准确率
     def _print_detection_eval_metrics(self, coco_eval):
         IoU_lo_thresh = 0.5
         IoU_hi_thresh = 0.95
@@ -253,7 +254,7 @@ class coco(imdb):
         print('~~~~ Summary metrics ~~~~')
         coco_eval.summarize()
 
-    #读取res_file, 计算并将coco_eval以pickle字符串形式写入“output_dir”/detection_results.pkl中
+    # 读取res_file, 计算并将coco_eval以pickle字符串形式写入“output_dir”/detection_results.pkl中
     def _do_detection_eval(self, res_file, output_dir):
         ann_type = 'bbox'
         coco_dt = self._COCO.loadRes(res_file)
@@ -268,7 +269,7 @@ class coco(imdb):
             #pickle.dump：将前面的对象保存到后面的文件中
         print('Wrote COCO eval results to: {}'.format(eval_file))
 
-    #返回results列表，以字典形式记录'image_id':index; 'category_id':cat_id; bbox:[x,y,w,h]; score:score[i]
+    # 返回results列表，以字典形式记录'image_id':index; 'category_id':cat_id; bbox:[x,y,w,h]; score:score[i]
     def _coco_results_one_category(self, boxes, cat_id):
         results = []
         for im_ind, index in enumerate(self.image_index):
@@ -287,7 +288,7 @@ class coco(imdb):
                   'score': scores[k]} for k in range(dets.shape[0])])
         return results
 
-   # 将results 以json字符串形式写入res_file中
+    # 将results 以json字符串形式写入res_file中
     def _write_coco_results_file(self, all_boxes, res_file):
         # [{"image_id": 42,
         #   "category_id": 18,
@@ -306,7 +307,7 @@ class coco(imdb):
         with open(res_file, 'w') as fid:
             json.dump(results, fid)
 
-    #在非测试集中计算其eval，清除标注有'cleanup'的res_file文件
+    # 在非测试集中计算其eval，清除标注有'cleanup'的res_file文件
     def evaluate_detections(self, all_boxes, output_dir):
         res_file = osp.join(output_dir, ('detections_' +
                                          self._image_set +
