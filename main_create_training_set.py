@@ -45,37 +45,49 @@ def generate_seg_img_map():
         idx1 += 1
     return map
 
+
 # 生成随机数，范围 0~分割索引最大值
 def random_seg_idx():
     return randint(0, len(seg_index)-1)
+
 
 # 生成随机数，范围 (1, len(s)-2)
 def random_obj_idx(s):
     return randint(1, len(s)-2)
 
 
+# 生成两个随机数，长度分别为高度差和宽度差
 def random_obj_loc(img_h, img_w, obj_h, obj_w):
     return randint(0, img_h - obj_h), randint(0, img_w - obj_w)
 
 
+# 返回不为0的行和列的起始终止值
 def find_obj_vertex(mask):
     hor = np.where(np.sum(mask, axis=0) > 0)
     ver = np.where(np.sum(mask, axis=1) > 0)
     return hor[0][0], hor[0][-1], ver[0][0], ver[0][-1]
 
 
+# 复制filename到savefile，以树的形式记录xmin, ymin, xmax, ymax
 def modify_xml(filename, savefile, xmin, ymin, xmax, ymax):
+
+    # 定义实例element，text属性为content
     def create_node(tag, property_map, content):
         element = Element(tag, property_map)
         element.text = content
         return element
+
     copyfile(filename, savefile)
     tree = ET.parse(savefile)
     root = tree.getroot()
+    # 在root中删除object
     for obj in root.findall('object'):
         root.remove(obj)
+
+    # new_obj: tag = 'object', attribute  = {}
     new_obj = Element('object', {})
     new_obj.append(create_node('name', {}, 'tampered'))
+    # bndbox: tag = 'bndbox', attribute = {}
     bndbox = Element('bndbox', {})
     bndbox.append(create_node('xmin', {}, str(xmin)))
     bndbox.append(create_node('ymin', {}, str(ymin)))
@@ -92,8 +104,11 @@ if __name__ == '__main__':
     while count < DATASET_SIZE:
         if count % 100 == 0:
             print('>>> %d / %d' % (count, DATASET_SIZE))
-        img_idx = count % len(image_index)
+        img_idx = count % len(image_index)  # count % 类中图片数量
         seg_idx = random_seg_idx()
+        # img：图片
+        # seg：随机到的分割图片
+        # seg_img：图片img匹配的分割图片
         img = Image.open(imdb.image_path_at(img_idx))   # base img
         seg = Image.open(imdb.seg_path_at(seg_idx)).convert('P')    # add-on object seg img picked randomly
         seg_img = Image.open(imdb.image_path_at(map[seg_idx]))  # corresponding add-on object original img
