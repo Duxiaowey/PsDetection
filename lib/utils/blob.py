@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 
 
+# 将图片转换为适合网络输入的形式
 def im_list_to_blob(ims):
     """Convert a list of images into a network input.
 
@@ -30,6 +31,7 @@ def im_list_to_blob(ims):
     return blob
 
 
+# 将图片resize为统一尺寸
 def prep_im_for_blob(im, pixel_means, target_size, max_size):
     """Mean subtract and scale an image for use in a blob."""
     im = im.astype(np.float32, copy=False)
