@@ -169,7 +169,7 @@ def _unmap(data, count, inds, fill=0):
         ret[inds, :] = data
     return ret
 
-
+# 返回偏移量,(target_dx, target_dy, target_dw, target_dh)
 def _compute_targets(ex_rois, gt_rois):
     """Compute bounding-box regression targets for an image."""
 

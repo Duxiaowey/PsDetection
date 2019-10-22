@@ -40,6 +40,9 @@ import numpy as np
 
 def generate_anchors(base_size=16, ratios=[0.5, 1, 2],
                      scales=2 ** np.arange(3, 6)):
+                     # base_size定义初始感受野为16*16，
+                     # ratio定义anchor比例为1:2, 1:1, 1:0.5，
+                     # scales定义三种面积大小，(16*8) x (16*8), (16*16) x (16*16), (16*32) x (16*32)
     """
     Generate anchor (reference) windows by enumerating aspect ratios X
     scales wrt a reference (0, 0, 15, 15) window.
@@ -52,6 +55,7 @@ def generate_anchors(base_size=16, ratios=[0.5, 1, 2],
     return anchors
 
 
+# 返回anchor的宽度，高度，x中心，y中心
 def _whctrs(anchor):
     """
     Return width, height, x center, and y center for an anchor (window).
@@ -64,6 +68,7 @@ def _whctrs(anchor):
     return w, h, x_ctr, y_ctr
 
 
+# 返回anchor的x1, y1, x2, y2
 def _mkanchors(ws, hs, x_ctr, y_ctr):
     """
     Given a vector of widths (ws) and heights (hs) around a center
@@ -79,6 +84,7 @@ def _mkanchors(ws, hs, x_ctr, y_ctr):
     return anchors
 
 
+# 对于给定的ratio，返回新的anchor
 def _ratio_enum(anchor, ratios):
     """
     Enumerate a set of anchors for each aspect ratio wrt an anchor.
@@ -87,8 +93,9 @@ def _ratio_enum(anchor, ratios):
     w, h, x_ctr, y_ctr = _whctrs(anchor)
     size = w * h
     size_ratios = size / ratios
-    ws = np.round(np.sqrt(size_ratios))
+    ws = np.round(np.sqrt(size_ratios)) # np.round()返回四舍五入值
     hs = np.round(ws * ratios)
+    # ws * hs = sqrt(size/ratiao) * sqrt(size*ratio)
     anchors = _mkanchors(ws, hs, x_ctr, y_ctr)
     return anchors
 
@@ -112,6 +119,7 @@ if __name__ == '__main__':
     a = generate_anchors()
     print(time.time() - t)
     print(a)
+    
     from IPython import embed;
 
     embed()
