@@ -138,10 +138,10 @@ if __name__ == '__main__':
     # img[0, :, :, 1] = PlotImage(img[0, :, :, 1])
     # img[0, :, :, 2] = PlotImage(img[0, :, :, 2])
     plt.imshow(img2[0])
-    plt.savefig('noise0')
+    plt.savefig('noise0.jpg')
 
     plt.imshow(PlotImage(img[0]))
-    plt.savefig('noise1')
+    plt.savefig('noise1.jpg')
 
     # plt.imshow(img[0])
     # plt.show()
