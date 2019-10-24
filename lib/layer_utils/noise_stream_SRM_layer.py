@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow.contrib.slim as slim
 
+# 将输入图片归一化
 def PlotImage(image):
     """
 	PlotImage: Give a normalized image matrix which can be used with implot, etc.
@@ -21,6 +22,7 @@ def PlotImage(image):
     return (im - np.min(im)) / (np.max(im) - np.min(im))
 
 def SRM(imgs):
+    # 定义三个滤波器
     filter1 = [[0, 0, 0, 0, 0],
                [0, -1, 2, -1, 0],
                [0, 2, -4, 2, 0],
