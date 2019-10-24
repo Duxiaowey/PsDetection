@@ -22,27 +22,33 @@ def PlotImage(image):
     return (im - np.min(im)) / (np.max(im) - np.min(im))
 
 def SRM(imgs):
-    # 定义三个滤波器
+    # 定义三个滤波器,滤波器大小为5x5
+    # filter1: egde3*3
     filter1 = [[0, 0, 0, 0, 0],
                [0, -1, 2, -1, 0],
                [0, 2, -4, 2, 0],
                [0, -1, 2, -1, 0],
                [0, 0, 0, 0, 0]]
+    # filter2：egde5*5
     filter2 = [[-1, 2, -2, 2, -1],
                [2, -6, 8, -6, 2],
                [-2, 8, -12, 8, -2],
                [2, -6, 8, -6, 2],
                [-1, 2, -2, 2, -1]]
+    # filter3：一阶线性
     filter3 = [[0, 0, 0, 0, 0],
                [0, 0, 0, 0, 0],
                [0, 1, -2, 1, 0],
                [0, 0, 0, 0, 0],
                [0, 0, 0, 0, 0]]
+    # 定义q，将三个滤波器归一化
     q = [4.0, 12.0, 2.0]
     filter1 = np.asarray(filter1, dtype=float) / 4
     filter2 = np.asarray(filter2, dtype=float) / 12
     filter3 = np.asarray(filter3, dtype=float) / 2
+    # 将不同类的滤波器堆叠、处理，得到新滤波器
     filters = [[filter1, filter1, filter1], [filter2, filter2, filter2], [filter3, filter3, filter3]]
+    # new_filter(i,j,l,k) = origin_filter(k,l,i,j)
     filters = np.einsum('klij->ijlk', filters)
     filters = tf.Variable(filters, dtype=tf.float32)
     imgs = np.array(imgs, dtype=float)
@@ -72,9 +78,14 @@ def SRM(imgs):
     filters = np.einsum('klij->ijlk', filters)
     filters = filters.flatten()
     initializer_srm = tf.constant_initializer(filters)
+
+    # 分段函数:     x < -2, y = -2;     -2 < x < 2, y = x;     x > 2, y = 2
     def truncate_2(x):
         neg = ((x + 2) + abs(x + 2)) / 2 - 2
         return -(-neg+2 + abs(- neg+2)) / 2 + 2
+
+    # 卷积参数：
+    # inputs = input = tf.Variables(img),    num_outputs = 3,    kernel_size = 5 x 5,    rate = 1
     op2 = slim.conv2d(input, 3, [5, 5], trainable=False, weights_initializer=initializer_srm,
                       activation_fn=None, padding='SAME', stride=1, scope='srm')
     op2 = truncate_2(op2)
@@ -116,7 +127,7 @@ def SRM(imgs):
 
 
 if __name__ == '__main__':
-    img = Image.open('999.jpg')
+    img = Image.open('lib/layer_utils/000009.jpg')
     img = np.asarray(img)
     img, img2 = SRM([img])
     # img = np.sqrt(img)
@@ -127,10 +138,10 @@ if __name__ == '__main__':
     # img[0, :, :, 1] = PlotImage(img[0, :, :, 1])
     # img[0, :, :, 2] = PlotImage(img[0, :, :, 2])
     plt.imshow(img2[0])
-    plt.show()
+    plt.savefig('noise0')
 
     plt.imshow(PlotImage(img[0]))
-    plt.show()
+    plt.savefig('noise1')
 
     # plt.imshow(img[0])
     # plt.show()
