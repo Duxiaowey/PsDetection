@@ -12,25 +12,34 @@ from lib.utils.bbox_transform import bbox_transform_inv, clip_boxes
 from lib.config import config as cfg
 from lib.utils.nms_wrapper import nms
 
-
+# 利用训练好的rpn网络生成区域候选框
 def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors):
+    '''
+    cfg_key: Train/Test;
+    _feat_stride: [16, ]
+    anchors: generate_anchors_pre(height, width, feat_stride, anchor_scales(面积大小)=(8, 16, 32), anchor_ratios(宽高比)=(0.5, 1, 2))
+    '''
     """A simplified version compared to fast/er RCNN
        For details please see the technical report
     """
     if type(cfg_key) == bytes:
         cfg_key = cfg_key.decode('utf-8')
 
+    # 训练阶段
     if cfg_key == "TRAIN":
-        pre_nms_topN = cfg.FLAGS.rpn_train_pre_nms_top_n
-        post_nms_topN = cfg.FLAGS.rpn_train_post_nms_top_n
-        nms_thresh = cfg.FLAGS.rpn_train_nms_thresh
+        # Number of top scoring boxes to keep before apply NMS to RPN proposals
+        pre_nms_topN = cfg.FLAGS.rpn_train_pre_nms_top_n # 12000
+        post_nms_topN = cfg.FLAGS.rpn_train_post_nms_top_n # 2000
+        nms_thresh = cfg.FLAGS.rpn_train_nms_thresh # 0.7
+    # 测试阶段
     else:
-        pre_nms_topN = cfg.FLAGS.rpn_test_pre_nms_top_n
-        post_nms_topN = cfg.FLAGS.rpn_test_post_nms_top_n
-        nms_thresh = cfg.FLAGS.rpn_test_nms_thresh
+        pre_nms_topN = cfg.FLAGS.rpn_test_pre_nms_top_n # 6000
+        post_nms_topN = cfg.FLAGS.rpn_test_post_nms_top_n # 300
+        nms_thresh = cfg.FLAGS.rpn_test_nms_thresh # 0.7
 
     im_info = im_info[0]
     # Get the scores and bounding boxes
+    # 得到RPN预测框属于前景的分数(前num_anchor个是属于背景的概率，后num_anchor个是属于前景的概率)
     scores = rpn_cls_prob[:, :, :, num_anchors:]
     rpn_bbox_pred = rpn_bbox_pred.reshape((-1, 4))
     scores = scores.reshape((-1, 1))
