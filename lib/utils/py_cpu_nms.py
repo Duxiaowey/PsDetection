@@ -8,6 +8,16 @@
 import numpy as np
 
 def py_cpu_nms(dets, thresh):
+    '''
+    Return 
+
+    Parameters:
+    -----------
+    dets: ndarray
+        记录边界框信息：[x1, y1, x2, y2, scores]
+    thresh: float
+        设定阈值
+    '''
     """Pure Python NMS baseline."""
     x1 = dets[:, 0]
     y1 = dets[:, 1]
@@ -15,7 +25,7 @@ def py_cpu_nms(dets, thresh):
     y2 = dets[:, 3]
     scores = dets[:, 4]
 
-    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    areas = (x2 - x1 + 1) * (y2 - y1 + 1)   # 框面积
     order = scores.argsort()[::-1]
 
     keep = []

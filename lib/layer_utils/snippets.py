@@ -57,7 +57,7 @@ def generate_anchors_pre(height, width, feat_stride, anchor_scales=(8, 16, 32), 
     K = shifts.shape[0]
     # K = width x height
     # width changes faster, so here it is H, W, C
-    anchors = anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))
+    anchors = anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))   # shape = [K, A, 4], K = H x W, A = 9
     anchors = anchors.reshape((K * A, 4)).astype(np.float32, copy=False)
     length = np.int32(anchors.shape[0])
     # length = (number of anchors) x width x height 
