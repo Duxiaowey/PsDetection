@@ -19,7 +19,7 @@ def py_cpu_nms(dets, thresh):
     dets: ndarray
         记录边界框信息：[x1, y1, x2, y2, scores]
     thresh: float
-        设定阈值
+        设定的阈值，重叠部分小于该阈值的框被丢弃
 
     Returns
     -------
