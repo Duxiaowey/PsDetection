@@ -12,6 +12,15 @@ import numpy as np
 
 # 边框回归补偿量
 def bbox_transform(ex_rois, gt_rois):
+    """
+    Return 偏移量 [dx, dy, dw, dh]
+
+    Return
+    ------
+    targets: ndarray
+        (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()
+
+    """
     # ex_rois:内部anchor; gt_rois:与anchor最匹配的GT
     ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
     ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
