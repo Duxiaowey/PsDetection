@@ -41,13 +41,28 @@ def bbox_transform(ex_rois, gt_rois):
     return targets
 
 
-# 边框回归
+# 边框回归，返回回归后的顶点坐标
 def bbox_transform_inv(boxes, deltas):
+    """
+    Return pred_boxes' vertex coordinates
+
+    Parameter
+    ---------
+    boxes: ndarray
+        记录原始box的顶点坐标, [x1, y1, x2, y2]
+    deltas: ndarray
+        记录偏移量
+
+    Return
+    ------
+    pred_boxes: ndarray
+        记录原始box经回归后加上偏移量的顶点坐标,[x1, y1, x2, y2]
+    """
     if boxes.shape[0] == 0:
         return np.zeros((0, deltas.shape[1]), dtype=deltas.dtype)
 
     boxes = boxes.astype(deltas.dtype, copy=False)
-    # 得到boxes的x, y
+    # 计算输入boxes的宽、高、中心
     widths = boxes[:, 2] - boxes[:, 0] + 1.0
     heights = boxes[:, 3] - boxes[:, 1] + 1.0
     ctr_x = boxes[:, 0] + 0.5 * widths
@@ -85,6 +100,21 @@ def bbox_transform_inv(boxes, deltas):
 
 # 将proposals的边界限制在图片内
 def clip_boxes(boxes, im_shape):
+    """
+    Return clipped boxes
+
+    Parameter
+    ---------
+    boxes: ndarray
+        boxes before clip, [x1, y1, x2, y2]
+    im_shape: list
+        image shape, [height, width]
+
+    Return
+    ------
+    boxes: ndarray
+        boxes after clip
+    """
     """
     Clip boxes to image boundaries.
     """
