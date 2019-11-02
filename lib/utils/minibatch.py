@@ -19,11 +19,15 @@ from lib.utils.blob import prep_im_for_blob, im_list_to_blob
 
 
 def get_minibatch(roidb, num_classes):
-    """Given a roidb, construct a minibatch sampled from it."""
-    num_images = len(roidb)
+    """
+    Given a roidb, construct a minibatch sampled from it.
+    
+    Return: blob
+        a dict, {'data', 'gt_boxes', 'im_info'}
+    """
+    num_images = len(roidb)          # 读取图片数量
     # Sample random scales to use for each image in this batch
-    random_scale_inds = npr.randint(0, high=len(cfg.FLAGS2["scales"]),
-                                    size=num_images)
+    random_scale_inds = npr.randint(0, high=len(cfg.FLAGS2["scales"]), size=num_images)
     assert (cfg.FLAGS.batch_size % num_images == 0), 'num_images ({}) must divide BATCH_SIZE ({})'.format(num_images, cfg.FLAGS.batch_size)
 
     # Get the input image blob, formatted for caffe
@@ -37,24 +41,33 @@ def get_minibatch(roidb, num_classes):
     # gt boxes: (x1, y1, x2, y2, cls)
     if cfg.FLAGS.use_all_gt:
         # Include all ground truth boxes
+        # 若use_all_gt=True, 取所有前景ground truth
         gt_inds = np.where(roidb[0]['gt_classes'] != 0)[0]
     else:
         # For the COCO ground truth boxes, exclude the ones that are ''iscrowd''
+        # 若use_all_gt=False，取重叠部分小于阈值的ground truth
         gt_inds = np.where(roidb[0]['gt_classes'] != 0 & np.all(roidb[0]['gt_overlaps'].toarray() > -1.0, axis=1))[0]
     gt_boxes = np.empty((len(gt_inds), 5), dtype=np.float32)
     gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
     gt_boxes[:, 4] = roidb[0]['gt_classes'][gt_inds]
     blobs['gt_boxes'] = gt_boxes
-    blobs['im_info'] = np.array(
-        [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
-        dtype=np.float32)
+    blobs['im_info'] = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
 
     return blobs
 
 
 def _get_image_blob(roidb, scale_inds):
-    """Builds an input blob from the images in the roidb at the specified
+    """
+    Builds an input blob from the images in the roidb at the specified
     scales.
+    将输入的图片减掉均值，统一尺寸，并转为适合网络输入的形式
+
+    Returns
+    -------
+    blob: 
+        适合网络输入的im
+    im_scale: float
+        target_size/im_min_size 或 cfg.FLAGS.max_size/im_max_size
     """
     num_images = len(roidb)
     processed_ims = []

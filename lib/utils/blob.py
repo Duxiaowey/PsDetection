@@ -31,14 +31,23 @@ def im_list_to_blob(ims):
     return blob
 
 
-# 将图片resize为统一尺寸
+# 将图片减掉均值后resize为统一尺寸
 def prep_im_for_blob(im, pixel_means, target_size, max_size):
-    """Mean subtract and scale an image for use in a blob."""
+    """
+    Mean subtract and scale an image for use in a blob.
+
+    Returns
+    -------
+    im: ndarray
+        im = im - mean
+    im_scale: float
+        target_size/im_size_min 或 max_size/im_size_max
+    """
     im = im.astype(np.float32, copy=False)
     im -= pixel_means
     im_shape = im.shape
-    im_size_min = np.min(im_shape[0:2])
-    im_size_max = np.max(im_shape[0:2])
+    im_size_min = np.min(im_shape[0:2]) # 图片维度的最大值, 如shape=[3,6,2], 则im_size_min=2
+    im_size_max = np.max(im_shape[0:2]) # 图片维度的最小值, 如shape=[3,6,2], 则im_size_min=6
     im_scale = float(target_size) / float(im_size_min)
     # Prevent the biggest axis from being more than MAX_SIZE
     if np.round(im_scale * im_size_max) > max_size:
