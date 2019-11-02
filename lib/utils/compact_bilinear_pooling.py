@@ -6,6 +6,7 @@ import tensorflow as tf
 # from sequential_fft import sequential_batch_fft, sequential_batch_ifft
 
 def _fft(bottom, sequential, compute_size):
+    # 若sequential = False, 返回bottom的快速傅里叶变换FFT
     if sequential:
         # return sequential_batch_fft(bottom, compute_size)
         return
@@ -13,6 +14,7 @@ def _fft(bottom, sequential, compute_size):
         return tf.fft(bottom)
 
 def _ifft(bottom, sequential, compute_size):
+    # 若sequential = False, 返回bottom的快速傅里叶变换的逆变换iFFT
     if sequential:
         # return sequential_batch_ifft(bottom, compute_size)
         return
@@ -37,7 +39,8 @@ def _generate_sketch_matrix(rand_h, rand_s, output_dim):
     assert(rand_h.ndim==1 and rand_s.ndim==1 and len(rand_h)==len(rand_s))
     assert(np.all(rand_h >= 0) and np.all(rand_h < output_dim))
 
-    input_dim = len(rand_h)
+    input_dim = len(rand_h)     # 输入维度
+    # indices.shape = (input_dim, 2), 第一列为(1, 2, ……, input_dim), 第二列为rand_h
     indices = np.concatenate((np.arange(input_dim)[..., np.newaxis],
                               rand_h[..., np.newaxis]), axis=1)
     sparse_sketch_matrix = tf.sparse_reorder(
@@ -93,25 +96,33 @@ def compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True,
     input_dim1 = bottom1.get_shape().as_list()[-1]
     input_dim2 = bottom2.get_shape().as_list()[-1]
 
-    # Step 0: Generate vectors and sketch matrix for tensor count sketch
-    # This is only done once during graph construction, and fixed during each
-    # operation
-    if rand_h_1 is None:
+    '''
+    Step 0: Generate vectors and sketch matrix for tensor count sketch
+    This is only done once during graph construction, and fixed during each
+    operation
+    生成随机向量，用该随机向量生成稀疏矩阵sparse_sketch_matrix1, sparse_sketch_matrix2
+    '''
+    if rand_h_1 is None:        # 生成input_dim1个[0, output_dim)之间的随机整数
         np.random.seed(seed_h_1)
         rand_h_1 = np.random.randint(output_dim, size=input_dim1)
-    if rand_s_1 is None:
+    if rand_s_1 is None:        # 生成input_dim1个随机数｛-1， 1｝
         np.random.seed(seed_s_1)
         rand_s_1 = 2*np.random.randint(2, size=input_dim1) - 1
-    sparse_sketch_matrix1 = _generate_sketch_matrix(rand_h_1, rand_s_1, output_dim)
-    if rand_h_2 is None:
+    sparse_sketch_matrix1 = _generate_sketch_matrix(rand_h_1, rand_s_1, output_dim) # 生成稀疏矩阵
+    if rand_h_2 is None:        # 生成input_dim2个[0, output_dim)之间的随机整数
         np.random.seed(seed_h_2)
         rand_h_2 = np.random.randint(output_dim, size=input_dim2)
-    if rand_s_2 is None:
+    if rand_s_2 is None:        # 生成input_dim2个随机数｛-1， 1｝
         np.random.seed(seed_s_2)
         rand_s_2 = 2*np.random.randint(2, size=input_dim2) - 1
-    sparse_sketch_matrix2 = _generate_sketch_matrix(rand_h_2, rand_s_2, output_dim)
+    sparse_sketch_matrix2 = _generate_sketch_matrix(rand_h_2, rand_s_2, output_dim) # 生成稀疏矩阵
 
-    # Step 1: Flatten the input tensors and count sketch
+    ''' 
+    Step 1: Flatten the input tensors and count sketch
+    将输入的bottom1, bottom2分别拉平为一列，与生成的两个稀疏矩阵相乘得到sketch1, sketch2:
+    sketch1 = bottom1 * sparse_sketch_matrix1
+    sketch2 = bottom2 * sparse_sketch_matrix2
+    '''
     bottom1_flat = tf.reshape(bottom1, [-1, input_dim1])
     bottom2_flat = tf.reshape(bottom2, [-1, input_dim2])
     # Essentially:
@@ -125,13 +136,21 @@ def compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True,
     sketch2 = tf.transpose(tf.sparse_tensor_dense_matmul(sparse_sketch_matrix2,
         bottom2_flat, adjoint_a=True, adjoint_b=True))
 
-    # Step 2: FFT
+    ''' 
+    Step 2: FFT
+    fft1 = FFT(sketch1)
+    fft2 = FFT(sketch2)
+    '''
     fft1 = _fft(tf.complex(real=sketch1, imag=tf.zeros_like(sketch1)),
                 sequential, compute_size)
     fft2 = _fft(tf.complex(real=sketch2, imag=tf.zeros_like(sketch2)),
                 sequential, compute_size)
 
-    # Step 3: Elementwise product
+    '''
+    Step 3: Elementwise product
+    fft_product = fft1 * fft2
+    cbp = iFFT(fft_product).reshape(bottom1.shape)
+    '''
     fft_product = tf.multiply(fft1, fft2)
 
     # Step 4: Inverse FFT and reshape back
@@ -144,6 +163,7 @@ def compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True,
     # print(cbp_flat)
     # print(cbp)
     # Step 5: Sum pool over spatial dimensions, if specified
+    # 沿1，2维求和
     # if sum_pool:
     #     cbp = tf.reduce_sum(cbp, reduction_indices=[1, 2])
 
