@@ -5,6 +5,16 @@ import tensorflow as tf
 from compact_bilinear_pooling import compact_bilinear_pooling_layer
 
 def bp(bottom1, bottom2, sum_pool=True):
+    '''
+    Return the fusion of bottom1 and bottom2
+    方式：逐元素相乘，维度扩大到dim1*dim2
+
+    Return
+    ------
+    output: ndarray
+        if sum_pool=True, output.shape=(N, dim1*dim2)
+        if sum_pool=False, output.shape=(N, H, W, dim1*dim2)
+    '''
     assert(np.all(bottom1.shape[:3] == bottom2.shape[:3]))
     batch_size, height, width = bottom1.shape[:3]
     output_dim = bottom1.shape[-1] * bottom2.shape[-1]
@@ -29,7 +39,7 @@ output_dim = 16000
 bottom1 = tf.placeholder(tf.float32, [None, None, None, input_dim1])
 bottom2 = tf.placeholder(tf.float32, [None, None, None, input_dim2])
 top = compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True)
-grad = tf.gradients(top, [bottom1, bottom2])
+grad = tf.gradients(top, [bottom1, bottom2])        # grad为top对[bottom1, bottom2]的导数, shape = (N, )
 
 def cbp(bottom1_value, bottom2_value):
     sess = tf.get_default_session()
@@ -45,6 +55,7 @@ def test_kernel_approximation(batch_size, height, width):
     print("Testing kernel approximation...")
 
     # Input values
+    # 生成四个随机矩阵，(N, H, W, input_dim)
     x = np.random.rand(batch_size, height, width, input_dim1).astype(np.float32)
     y = np.random.rand(batch_size, height, width, input_dim2).astype(np.float32)
 
@@ -52,15 +63,18 @@ def test_kernel_approximation(batch_size, height, width):
     w = np.random.rand(batch_size, height, width, input_dim2).astype(np.float32)
 
     # Compact Bilinear Pooling results
+    # 计算紧密双线性池化层输出结果
     cbp_xy = cbp(x, y)
     cbp_zw = cbp(z, w)
 
     # (Original) Bilinear Pooling results
+    # 计算普通双线性池化层输出结果
     bp_xy = bp(x, y)
     bp_zw = bp(z, w)
 
     # Check the kernel results of Compact Bilinear Pooling
     # against Bilinear Pooling
+    # 计算两者比值
     cbp_kernel = np.sum(cbp_xy*cbp_zw, axis=1)
     bp_kernel = np.sum(bp_xy*bp_zw, axis=1)
     ratio = cbp_kernel / bp_kernel
