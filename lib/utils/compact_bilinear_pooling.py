@@ -3,21 +3,28 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import tensorflow as tf
 
-# from sequential_fft import sequential_batch_fft, sequential_batch_ifft
+from sequential_fft import sequential_batch_fft, sequential_batch_ifft
 
+# 定义函数_fft, _ifft，计算快速傅里叶变换及其逆变换
 def _fft(bottom, sequential, compute_size):
-    # 若sequential = False, 返回bottom的快速傅里叶变换FFT
+    '''
+    Return
+    ------
+    FFT(bottom), has the same shape of bottom
+    '''
     if sequential:
-        # return sequential_batch_fft(bottom, compute_size)
-        return
+        return sequential_batch_fft(bottom, compute_size)
     else:
         return tf.fft(bottom)
 
 def _ifft(bottom, sequential, compute_size):
-    # 若sequential = False, 返回bottom的快速傅里叶变换的逆变换iFFT
+    '''
+    Return
+    ------
+    iFFT(bottom), has the same shape of bottom
+    '''
     if sequential:
-        # return sequential_batch_ifft(bottom, compute_size)
-        return
+        return sequential_batch_ifft(bottom, compute_size)
     else:
         return tf.ifft(bottom)
 
@@ -25,10 +32,12 @@ def _generate_sketch_matrix(rand_h, rand_s, output_dim):
     """
     Return a sparse matrix used for tensor sketch operation in compact bilinear
     pooling
+
     Args:
         rand_h: an 1D numpy array containing indices in interval `[0, output_dim)`.
         rand_s: an 1D numpy array of 1 and -1, having the same shape as `rand_h`.
         output_dim: the output dimensions of compact bilinear pooling.
+
     Returns:
         a sparse matrix of shape [input_dim, output_dim] for tensor sketch.
     """
@@ -39,32 +48,36 @@ def _generate_sketch_matrix(rand_h, rand_s, output_dim):
     assert(rand_h.ndim==1 and rand_s.ndim==1 and len(rand_h)==len(rand_s))
     assert(np.all(rand_h >= 0) and np.all(rand_h < output_dim))
 
-    input_dim = len(rand_h)     # 输入维度
-    # indices.shape = (input_dim, 2), 第一列为(1, 2, ……, input_dim), 第二列为rand_h
+    input_dim = len(rand_h)                                 # 输入维度，input_dim
     indices = np.concatenate((np.arange(input_dim)[..., np.newaxis],
-                              rand_h[..., np.newaxis]), axis=1)
+                              rand_h[..., np.newaxis]), axis=1) # indices.shape = (input_dim, 2)
     sparse_sketch_matrix = tf.sparse_reorder(
         tf.SparseTensor(indices, rand_s, [input_dim, output_dim]))
-    return sparse_sketch_matrix
+    return sparse_sketch_matrix                                 # 稀疏矩阵：(input_dim, 2); 表示的密集矩阵：(input_dim, output_dim)
 
 def compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True,
     rand_h_1=None, rand_s_1=None, rand_h_2=None, rand_s_2=None,
-    seed_h_1=1, seed_s_1=3, seed_h_2=5, seed_s_2=7, sequential=False,
+    seed_h_1=1, seed_s_1=3, seed_h_2=5, seed_s_2=7, sequential=True,
     compute_size=128):
     """
     Compute compact bilinear pooling over two bottom inputs. Reference:
+
     Yang Gao, et al. "Compact Bilinear Pooling." in Proceedings of IEEE
     Conference on Computer Vision and Pattern Recognition (2016).
     Akira Fukui, et al. "Multimodal Compact Bilinear Pooling for Visual Question
     Answering and Visual Grounding." arXiv preprint arXiv:1606.01847 (2016).
+
     Args:
         bottom1: 1st input, 4D Tensor of shape [batch_size, height, width, input_dim1].
         bottom2: 2nd input, 4D Tensor of shape [batch_size, height, width, input_dim2].
+
         output_dim: output dimension for compact bilinear pooling.
+
         sum_pool: (Optional) If True, sum the output along height and width
                   dimensions and return output shape [batch_size, output_dim].
                   Otherwise return [batch_size, height, width, output_dim].
                   Default: True.
+
         rand_h_1: (Optional) an 1D numpy array containing indices in interval
                   `[0, output_dim)`. Automatically generated from `seed_h_1`
                   if is None.
@@ -77,6 +90,7 @@ def compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True,
         rand_s_2: (Optional) an 1D numpy array of 1 and -1, having the same shape
                   as `rand_h_2`. Automatically generated from `seed_s_2` if is
                   None.
+
         sequential: (Optional) if True, use the sequential FFT and IFFT
                     instead of tf.batch_fft or tf.batch_ifft to avoid
                     out-of-memory (OOM) error.
@@ -87,6 +101,7 @@ def compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True,
                       be faster but can cause OOM and FFT failure. This
                       parameter is only effective when sequential == True.
                       Default: 128.
+
     Returns:
         Compact bilinear pooled results of shape [batch_size, output_dim] or
         [batch_size, height, width, output_dim], depending on `sum_pool`.
@@ -96,75 +111,60 @@ def compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True,
     input_dim1 = bottom1.get_shape().as_list()[-1]
     input_dim2 = bottom2.get_shape().as_list()[-1]
 
-    '''
-    Step 0: Generate vectors and sketch matrix for tensor count sketch
-    This is only done once during graph construction, and fixed during each
-    operation
-    生成随机向量，用该随机向量生成稀疏矩阵sparse_sketch_matrix1, sparse_sketch_matrix2
-    '''
-    if rand_h_1 is None:        # 生成input_dim1个[0, output_dim)之间的随机整数
+    # Step 0: Generate vectors and sketch matrix for tensor count sketch
+    # This is only done once during graph construction, and fixed during each
+    # operation
+    if rand_h_1 is None:                    # 生成input_dim1个[0, output_dim)之间的随机整数
         np.random.seed(seed_h_1)
         rand_h_1 = np.random.randint(output_dim, size=input_dim1)
-    if rand_s_1 is None:        # 生成input_dim1个随机数｛-1， 1｝
+    if rand_s_1 is None:                    # 生成input_dim1个随机数｛-1， 1｝
         np.random.seed(seed_s_1)
         rand_s_1 = 2*np.random.randint(2, size=input_dim1) - 1
-    sparse_sketch_matrix1 = _generate_sketch_matrix(rand_h_1, rand_s_1, output_dim) # 生成稀疏矩阵
-    if rand_h_2 is None:        # 生成input_dim2个[0, output_dim)之间的随机整数
+    sparse_sketch_matrix1 = _generate_sketch_matrix(rand_h_1, rand_s_1, output_dim) # 生成稀疏矩阵, (input_dim, output_dim)
+    if rand_h_2 is None:
         np.random.seed(seed_h_2)
         rand_h_2 = np.random.randint(output_dim, size=input_dim2)
-    if rand_s_2 is None:        # 生成input_dim2个随机数｛-1， 1｝
+    if rand_s_2 is None:
         np.random.seed(seed_s_2)
         rand_s_2 = 2*np.random.randint(2, size=input_dim2) - 1
-    sparse_sketch_matrix2 = _generate_sketch_matrix(rand_h_2, rand_s_2, output_dim) # 生成稀疏矩阵
+    sparse_sketch_matrix2 = _generate_sketch_matrix(rand_h_2, rand_s_2, output_dim) # 生成稀疏矩阵, (input_dim, output_dim)
 
-    ''' 
-    Step 1: Flatten the input tensors and count sketch
-    将输入的bottom1, bottom2分别拉平为一列，与生成的两个稀疏矩阵相乘得到sketch1, sketch2:
-    sketch1 = bottom1 * sparse_sketch_matrix1
-    sketch2 = bottom2 * sparse_sketch_matrix2
-    '''
-    bottom1_flat = tf.reshape(bottom1, [-1, input_dim1])
-    bottom2_flat = tf.reshape(bottom2, [-1, input_dim2])
+    # Step 1: Flatten the input tensors and count sketch
+    bottom1_flat = tf.reshape(bottom1, [-1, input_dim1])        # (N x H x W, dim1)
+    bottom2_flat = tf.reshape(bottom2, [-1, input_dim2])        # (N x H x W, dim1)
     # Essentially:
     #   sketch1 = bottom1 * sparse_sketch_matrix
     #   sketch2 = bottom2 * sparse_sketch_matrix
     # But tensorflow only supports left multiplying a sparse matrix, so:
     #   sketch1 = (sparse_sketch_matrix.T * bottom1.T).T
     #   sketch2 = (sparse_sketch_matrix.T * bottom2.T).T
+    # use adjoint_a=True and adjoint_b=True to represent bottom1.T and bottom2.T
     sketch1 = tf.transpose(tf.sparse_tensor_dense_matmul(sparse_sketch_matrix1,
-        bottom1_flat, adjoint_a=True, adjoint_b=True))
+        bottom1_flat, adjoint_a=True, adjoint_b=True))      # (N x H x W, output_dim)
     sketch2 = tf.transpose(tf.sparse_tensor_dense_matmul(sparse_sketch_matrix2,
         bottom2_flat, adjoint_a=True, adjoint_b=True))
 
-    ''' 
-    Step 2: FFT
-    fft1 = FFT(sketch1)
-    fft2 = FFT(sketch2)
-    '''
+    # Step 2: FFT
     fft1 = _fft(tf.complex(real=sketch1, imag=tf.zeros_like(sketch1)),
-                sequential, compute_size)
+                sequential, compute_size)                   # (N x H x W, output_dim)
     fft2 = _fft(tf.complex(real=sketch2, imag=tf.zeros_like(sketch2)),
                 sequential, compute_size)
 
-    '''
-    Step 3: Elementwise product
-    fft_product = fft1 * fft2
-    cbp = iFFT(fft_product).reshape(bottom1.shape)
-    '''
+    # Step 3: Elementwise product
     fft_product = tf.multiply(fft1, fft2)
 
     # Step 4: Inverse FFT and reshape back
     # Compute output shape dynamically: [batch_size, height, width, output_dim]
-    cbp_flat = tf.real(_ifft(fft_product, sequential, compute_size))
-    # output_shape = tf.add(tf.multiply(bottom1.get_shape(), [1, 1, 1, 0]),
-    #                       [0, 0, 0, output_dim])
-    cbp = tf.reshape(cbp_flat, bottom1.get_shape())
-    # print(bottom1.get_shape())
-    # print(cbp_flat)
-    # print(cbp)
+    cbp_flat = tf.real(_ifft(fft_product, sequential, compute_size))        # (N x H x W, output_dim)
+    output_shape = tf.add(tf.multiply(tf.shape(bottom1), [1, 1, 1, 0]),
+                          [0, 0, 0, output_dim])        # output_shape = [bottom1[:3], output_dim] = [N, H, W, output_dim]
+    cbp = tf.reshape(cbp_flat, output_shape)
+    # set static shape for the output
+    # 设置静态shape
+    cbp.set_shape(bottom1.get_shape().as_list()[:-1] + [output_dim])
+
     # Step 5: Sum pool over spatial dimensions, if specified
-    # 沿1，2维求和
-    # if sum_pool:
-    #     cbp = tf.reduce_sum(cbp, reduction_indices=[1, 2])
+    if sum_pool:
+        cbp = tf.reduce_sum(cbp, reduction_indices=[1, 2])
 
     return cbp
