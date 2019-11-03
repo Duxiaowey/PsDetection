@@ -18,7 +18,7 @@ def bp(bottom1, bottom2, sum_pool=True):
     output = output.reshape((batch_size, height, width, output_dim))
 
     if sum_pool:
-        output = np.sum(output, axis=(1, 2))
+        output = np.sum(output, axis=(1, 2))    # (N, dim1*dim2)
     return output
 
 # Input and output tensors
@@ -65,7 +65,7 @@ def test_kernel_approximation(batch_size, height, width):
     bp_kernel = np.sum(bp_xy*bp_zw, axis=1)
     ratio = cbp_kernel / bp_kernel
     print("ratio between Compact Bilinear Pooling (CBP) and Bilinear Pooling (BP):")
-    print(ratio)
+    print(ratio)        # shape = (N, )
     assert(np.all(np.abs(ratio - 1) < 2e-2))
     print("Passed.")
 

@@ -165,6 +165,6 @@ def compact_bilinear_pooling_layer(bottom1, bottom2, output_dim, sum_pool=True,
 
     # Step 5: Sum pool over spatial dimensions, if specified
     if sum_pool:
-        cbp = tf.reduce_sum(cbp, reduction_indices=[1, 2])
+        cbp = tf.reduce_sum(cbp, reduction_indices=[1, 2])  # (N, output_dim)
 
     return cbp
