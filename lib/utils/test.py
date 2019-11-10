@@ -37,9 +37,9 @@ def _get_image_blob(im):
         in the image pyramid
     """
     im_orig = im.astype(np.float32, copy=True)
-    im_orig -= cfg.FLAGS2["pixel_means"]
+    im_orig -= cfg.FLAGS2["pixel_means"]        # im_orig = im - pixel_mean
 
-    im_shape = im_orig.shape
+    im_shape = im_orig.shape                    # im_shape = im.shape
     im_size_min = np.min(im_shape[0:2])
     im_size_max = np.max(im_shape[0:2])
 

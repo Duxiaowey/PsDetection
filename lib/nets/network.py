@@ -22,7 +22,7 @@ from lib.layer_utils.snippets import generate_anchors_pre
 
 class Network(object):
     def __init__(self, batch_size=1):
-        self._feat_stride = [16, ]
+        self._feat_stride = [16, ]                               # 缩放比例=16
         self._feat_compress = [1. / 16., ]
         self._batch_size = batch_size
         self._predictions = {}
@@ -37,23 +37,31 @@ class Network(object):
         self._variables_to_fix = {}
 
     # Summaries #
-    def _add_image_summary(self, image, boxes):
+    def _add_image_summary(self, image, boxes):                                 # 图片还原，image = image + mean
+        '''
+        Parameters
+        ----------
+        image: (C, H, W)
+            bgr图片，记录每个通道每个像素的值
+        boxes: ndarray
+            gt_box，
+        '''
         # add back mean
         image += cfg.FLAGS2["pixel_means"]
         # bgr to rgb (opencv uses bgr)
         channels = tf.unstack(image, axis=-1)
-        image = tf.stack([channels[2], channels[1], channels[0]], axis=-1)
+        image = tf.stack([channels[2], channels[1], channels[0]], axis=-1)      # 将bgr通道顺序的图片转为rgb通道顺序
         # dims for normalization
-        width = tf.to_float(tf.shape(image)[2])
-        height = tf.to_float(tf.shape(image)[1])
-        # from [x1, y1, x2, y2, cls] to normalized [y1, x1, y1, x1]
-        cols = tf.unstack(boxes, axis=1)
+        width = tf.to_float(tf.shape(image)[2])                                 # 读取image宽度W, 以浮点形式记录
+        height = tf.to_float(tf.shape(image)[1])                                # 读取image高度H, 以浮点形式记录
+        # from [x1, y1, x2, y2, cls] to normalized [y1, x1, y2, x2]
+        cols = tf.unstack(boxes, axis=1)                                        # cols[i, :] = boxes[:, i], cols.shape=boxes.shape[1][0]
         boxes = tf.stack([cols[1] / height,
                           cols[0] / width,
                           cols[3] / height,
                           cols[2] / width], axis=1)
         # add batch dimension (assume batch_size==1)
-        #assert image.get_shape()[0] == 1
+        assert image.get_shape()[0] == 1        # 擅自加上
         boxes = tf.expand_dims(boxes, dim=0)
         image = tf.image.draw_bounding_boxes(image, boxes)
 
