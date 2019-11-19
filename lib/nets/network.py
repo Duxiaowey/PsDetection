@@ -267,10 +267,10 @@ class Network(object):
         return loss
 
     def create_architecture(self, sess, mode, num_classes, tag=None, anchor_scales=(8, 16, 32), anchor_ratios=(0.5, 1, 2)):
-        self._image = tf.placeholder(tf.float32, shape=[self._batch_size, None, None, 3])
+        self._image = tf.placeholder(tf.float32, shape=[self._batch_size, None, None, 3])   # [N, , , 3]
         # for noise
-        self._im_info = tf.placeholder(tf.float32, shape=[self._batch_size, 3])
-        self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
+        self._im_info = tf.placeholder(tf.float32, shape=[self._batch_size, 3])     # [N, 3]
+        self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])                # [ , 5]
         self._tag = tag
 
         self._num_classes = num_classes
@@ -310,7 +310,7 @@ class Network(object):
             self._train_summaries.append(var)
 
         if mode == 'TEST':
-            stds = np.tile(np.array(cfg.FLAGS2["bbox_normalize_stds"]), (self._num_classes))
+            stds = np.tile(np.array(cfg.FLAGS2["bbox_normalize_stds"]), (self._num_classes))    # 使bbox_normalize_stds适合bbox_pred的shape
             means = np.tile(np.array(cfg.FLAGS2["bbox_normalize_means"]), (self._num_classes))
             self._predictions["bbox_pred"] *= stds
             self._predictions["bbox_pred"] += means
